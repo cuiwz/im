@@ -1,0 +1,50 @@
+# Server 服务端相关配置
+server:
+  # 配置端口号
+  port: 8080
+  # tomcat 相关常用配置
+  tomcat:
+    uri-encoding: UTF-8
+
+# 配置数据源相关	使用 HikariCP 数据源
+# jdbc_config   datasource
+spring:
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/muxin?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true
+    username: root
+    password: 123456
+    # Hikari will use the above plus the following to setup connection pooling
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      # 等待连接池分配连接的最大时长
+      connection-timeout: 30000
+      # 最小连接数
+      minimum-idle: 5
+      # 最大连接数
+      maximum-pool-size: 15
+      # 自动提交
+      auto-commit: true
+      # 一个连接idle状态的最大时长（毫秒）
+      idle-timeout: 600000
+      # 连接池名字
+      pool-name: DatebookHikariCP
+      # 一个连接的生命时长
+      max-lifetime: 28740000
+      connection-test-query: SELECT 1
+
+# mybatis 相关配置
+mybatis:
+  type-aliases-package: com.cuiwz.pojo
+  mapper-locations: classpath:mapper/*.xml
+# 通用mapper配置
+mapper:
+  mappers: com.cuiwz.utils.MyMapper
+  not-empty: false
+  identity: MYSQL
+# 分页插件配置
+pagehelper:
+  helperDialect: mysql
+  supportMethodsArguments: true
+  params:
+    count: countSql
