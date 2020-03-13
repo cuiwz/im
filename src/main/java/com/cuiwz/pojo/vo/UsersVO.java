@@ -1,7 +1,5 @@
 package com.cuiwz.pojo.vo;
 
-import java.util.List;
-
 public class UsersVO {
     private String id;
     private String username;
