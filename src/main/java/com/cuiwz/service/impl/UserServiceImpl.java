@@ -15,7 +15,7 @@ import tk.mybatis.mapper.entity.Example.Criteria;
 public class UserServiceImpl implements UserService {
 
     @Autowired
-    private UsersMapper usersMapper;
+    private UsersMapper userMapper;
 
     @Autowired
     private Sid sid;
@@ -27,7 +27,7 @@ public class UserServiceImpl implements UserService {
         Users user = new Users();
         user.setUsername(username);
 
-        Users result = usersMapper.selectOne(user);
+        Users result = userMapper.selectOne(user);
 
         return result != null ? true:false;
     }
@@ -42,11 +42,12 @@ public class UserServiceImpl implements UserService {
         criteria.andEqualTo("username", username);
         criteria.andEqualTo("password", pwd);
 
-        Users result = usersMapper.selectOneByExample(userExample);
+        Users result = userMapper.selectOneByExample(userExample);
 
         return result;
     }
 
+    @Transactional(propagation = Propagation.REQUIRED)
     @Override
     public Users saveUser(Users user) {
 
@@ -56,8 +57,21 @@ public class UserServiceImpl implements UserService {
         user.setQrcode("");
 
         user.setId(userId);
-        usersMapper.insert(user);
+        userMapper.insert(user);
 
         return user;
     }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public Users updateUserInfo(Users user) {
+        userMapper.updateByPrimaryKeySelective(user);
+        return queryUserById(user.getId());
+    }
+
+    @Transactional(propagation = Propagation.SUPPORTS)
+    private Users queryUserById(String userId) {
+        return userMapper.selectByPrimaryKey(userId);
+    }
+
 }
