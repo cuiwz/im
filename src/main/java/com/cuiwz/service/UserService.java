@@ -1,5 +1,6 @@
 package com.cuiwz.service;
 
+import com.cuiwz.netty.ChatMsg;
 import com.cuiwz.pojo.Users;
 import com.cuiwz.pojo.vo.FriendRequestVO;
 import com.cuiwz.pojo.vo.MyFriendsVO;
@@ -89,5 +90,25 @@ public interface UserService {
      * @return
      */
     public List<MyFriendsVO> queryMyFriends(String userId);
+
+    /**
+     * 保存聊天消息到数据库
+     * @param chatMsg
+     * @return
+     */
+    public String saveMsg(ChatMsg chatMsg);
+
+    /**
+     * 批量签收消息
+     * @param msgIdList
+     */
+    public void updateMsgSigned(List<String> msgIdList);
+
+    /**
+     * 获取未签收消息列表
+     * @param acceptUserId
+     * @return
+     */
+    public List<com.cuiwz.pojo.ChatMsg> getUnReadMsgList(String acceptUserId);
 
 }

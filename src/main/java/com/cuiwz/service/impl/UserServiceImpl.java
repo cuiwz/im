@@ -1,10 +1,12 @@
 package com.cuiwz.service.impl;
 
+import com.cuiwz.enums.MsgActionEnum;
+import com.cuiwz.enums.MsgSignFlagEnum;
 import com.cuiwz.enums.SearchFriendsStatusEnum;
-import com.cuiwz.mapper.FriendsRequestMapper;
-import com.cuiwz.mapper.MyFriendsMapper;
-import com.cuiwz.mapper.UsersMapper;
-import com.cuiwz.mapper.UsersMapperCustom;
+import com.cuiwz.mapper.*;
+import com.cuiwz.netty.ChatMsg;
+import com.cuiwz.netty.DataContent;
+import com.cuiwz.netty.UserChannelRel;
 import com.cuiwz.pojo.FriendsRequest;
 import com.cuiwz.pojo.MyFriends;
 import com.cuiwz.pojo.Users;
@@ -13,7 +15,10 @@ import com.cuiwz.pojo.vo.MyFriendsVO;
 import com.cuiwz.service.UserService;
 import com.cuiwz.utils.FastDFSClient;
 import com.cuiwz.utils.FileUtils;
+import com.cuiwz.utils.JsonUtils;
 import com.cuiwz.utils.QRCodeUtils;
+import io.netty.channel.Channel;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import org.n3r.idworker.Sid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,6 +46,9 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private FriendsRequestMapper friendsRequestMapper;
+
+    @Autowired
+    private ChatMsgMapper chatMsgMapper;
 
     @Autowired
     private Sid sid;
@@ -202,6 +210,17 @@ public class UserServiceImpl implements UserService {
         saveFriends(sendUserId, acceptUserId);
         saveFriends(acceptUserId, sendUserId);
         deleteFriendRequest(sendUserId, acceptUserId);
+
+        Channel sendChannel = UserChannelRel.get(sendUserId);
+        if (sendChannel != null) {
+            // 使用websocket主动推送消息到请求发起者，更新他的通讯录列表为最新
+            DataContent dataContent = new DataContent();
+            dataContent.setAction(MsgActionEnum.PULL_FRIEND.type);
+
+            sendChannel.writeAndFlush(
+                    new TextWebSocketFrame(
+                            JsonUtils.objectToJson(dataContent)));
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
@@ -219,6 +238,44 @@ public class UserServiceImpl implements UserService {
     public List<MyFriendsVO> queryMyFriends(String userId) {
         List<MyFriendsVO> myFriends = usersMapperCustom.queryMyFriends(userId);
         return myFriends;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public String saveMsg(ChatMsg chatMsg) {
+
+        com.cuiwz.pojo.ChatMsg msgDB = new com.cuiwz.pojo.ChatMsg();
+        String msgId = sid.nextShort();
+        msgDB.setId(msgId);
+        msgDB.setAcceptUserId(chatMsg.getReceiverId());
+        msgDB.setSendUserId(chatMsg.getSenderId());
+        msgDB.setCreateTime(new Date());
+        msgDB.setSignFlag(MsgSignFlagEnum.unsign.type);
+        msgDB.setMsg(chatMsg.getMsg());
+
+        chatMsgMapper.insert(msgDB);
+
+        return msgId;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    @Override
+    public void updateMsgSigned(List<String> msgIdList) {
+        usersMapperCustom.batchUpdateMsgSigned(msgIdList);
+    }
+
+    @Transactional(propagation = Propagation.SUPPORTS)
+    @Override
+    public List<com.cuiwz.pojo.ChatMsg> getUnReadMsgList(String acceptUserId) {
+
+        Example chatExample = new Example(com.cuiwz.pojo.ChatMsg.class);
+        Criteria chatCriteria = chatExample.createCriteria();
+        chatCriteria.andEqualTo("signFlag", 0);
+        chatCriteria.andEqualTo("acceptUserId", acceptUserId);
+
+        List<com.cuiwz.pojo.ChatMsg> result = chatMsgMapper.selectByExample(chatExample);
+
+        return result;
     }
 
 }
